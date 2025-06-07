@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панк против Бизнесмена - Лабиринт Погони</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+            font-family: 'Exo 2', sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(2px 2px at 20px 30px, #eee, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.1), transparent),
+                radial-gradient(1px 1px at 90px 40px, #fff, transparent),
+                radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.1), transparent);
+            background-repeat: repeat;
+            background-size: 75px 100px;
+            animation: sparkle 20s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes sparkle {
+            0% { transform: translateY(0px); }
+            100% { transform: translateY(-100px); }
+        }
+
+        .game-container {
+            position: relative;
+            border: 4px solid transparent;
+            border-radius: 20px;
+            background: linear-gradient(45deg, #ff4757, #00ff88, #3742fa, #ff4757) border-box;
+            box-shadow: 
+                0 0 60px rgba(0, 255, 136, 0.4),
+                inset 0 0 60px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            animation: borderGlow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes borderGlow {
+            0% { box-shadow: 0 0 60px rgba(0, 255, 136, 0.4), inset 0 0 60px rgba(0, 0, 0, 0.2); }
+            50% { box-shadow: 0 0 80px rgba(255, 71, 87, 0.5), inset 0 0 60px rgba(0, 0, 0, 0.2); }
+            100% { box-shadow: 0 0 60px rgba(58, 66, 250, 0.4), inset 0 0 60px rgba(0, 0, 0, 0.2); }
+        }
+
+        canvas {
+            display: block;
+            background: radial-gradient(circle at 30% 30%, #1a1a2e, #0f0f23);
+            border-radius: 16px;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .game-info {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 60px;
+            font-family: 'Orbitron', monospace;
+        }
+
+        .player-status {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 25px;
+            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 3px solid;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .player1-status {
+            border-color: #ff4757;
+            background: linear-gradient(135deg, rgba(255, 71, 87, 0.1), rgba(0, 0, 0, 0.8));
+        }
+
+        .player2-status {
+            border-color: #3742fa;
+            background: linear-gradient(135deg, rgba(58, 66, 250, 0.1), rgba(0, 0, 0, 0.8));
+        }
+
+        .player-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        .player-boosts {
+            display: flex;
+            gap: 8px;
+            font-size: 12px;
+            color: #00ff88;
+        }
+
+        .timer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-family: 'Orbitron', monospace;
+            font-size: 24px;
+            font-weight: 700;
+            color: #00ff88;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.8);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #00ff88;
+        }
+
+        .cooldown-indicators {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .cooldown-bar {
+            width: 150px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #9c88ff;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .cooldown-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #9c88ff, #6c5ce7);
+            transition: width 0.1s ease;
+            box-shadow: 0 0 10px rgba(156, 136, 255, 0.6);
+        }
+
+        .cooldown-label {
+            font-family: 'Exo 2', sans-serif;
+            font-size: 12px;
+            color: #9c88ff;
+            margin-bottom: 2px;
+            text-shadow: 0 0 5px rgba(156, 136, 255, 0.8);
+        }
+
+        .controls-info {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            text-align: center;
+            font-size: 16px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #00ff88;
+            backdrop-filter: blur(10px);
+        }
+
+        .game-title {
+            font-family: 'Orbitron', monospace;
+            color: #00ff88;
+            font-size: 48px;
+            font-weight: 900;
+            margin-bottom: 30px;
+            text-shadow: 
+                0 0 10px rgba(0, 255, 136, 0.8),
+                0 0 20px rgba(0, 255, 136, 0.6),
+                0 0 40px rgba(0, 255, 136, 0.4);
+            text-align: center;
+            animation: titlePulse 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes titlePulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.05); }
+        }
+
+        .start-screen, .end-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.98));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+        }
+
+        .game-button {
+            padding: 20px 40px;
+            font-size: 24px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            background: linear-gradient(45deg, #ff4757, #ff6b7a);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            margin: 15px;
+            box-shadow: 
+                0 10px 30px rgba(255, 71, 87, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .game-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 
+                0 15px 40px rgba(255, 71, 87, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .game-button.secondary {
+            background: linear-gradient(45deg, #3742fa, #5352ed);
+            box-shadow: 
+                0 10px 30px rgba(58, 66, 250, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .game-button.secondary:hover {
+            box-shadow: 
+                0 15px 40px rgba(58, 66, 250, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .game-description {
+            text-align: center;
+            max-width: 700px;
+            margin: 30px;
+            line-height: 1.8;
+            font-size: 18px;
+            color: #ccc;
+        }
+
+        .winner-text {
+            font-family: 'Orbitron', monospace;
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            animation: winnerGlow 2s ease-in-out infinite alternate;
+        }
+        
+        .evil-face {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 200px;
+            z-index: 150;
+            animation: evilLaugh 3s ease-in-out;
+            pointer-events: none;
+        }
+        
+        @keyframes evilLaugh {
+            0% { 
+                opacity: 0; 
+                transform: translate(-50%, -50%) scale(0.5) rotate(-10deg);
+            }
+            20% { 
+                opacity: 1; 
+                transform: translate(-50%, -50%) scale(1.2) rotate(5deg);
+            }
+            40% { 
+                transform: translate(-50%, -50%) scale(0.9) rotate(-3deg);
+            }
+            60% { 
+                transform: translate(-50%, -50%) scale(1.1) rotate(2deg);
+            }
+            80% { 
+                transform: translate(-50%, -50%) scale(1) rotate(0deg);
+            }
+            100% { 
+                opacity: 0; 
+                transform: translate(-50%, -50%) scale(1.5) rotate(0deg);
+            }
+        }
+
+        @keyframes winnerGlow {
+            0% { text-shadow: 0 0 20px currentColor; }
+            100% { text-shadow: 0 0 40px currentColor, 0 0 60px currentColor; }
+        }
+
+        .hide {
+            display: none !important;
+        }
+
+        .minimap {
+            position: absolute;
+            top: 100px;
+            right: 20px;
+            width: 200px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .tension-indicator {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tension-bar {
+            width: 150px;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #666;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .tension-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00ff88, #ffff00, #ff4757);
+            transition: width 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 6px;
+        }
+
+        .tension-text {
+            font-family: 'Orbitron', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+            letter-spacing: 1px;
+        }
+
+        .tension-high .tension-fill {
+            box-shadow: 0 0 20px #ff4757;
+            animation: tensionPulse 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes tensionPulse {
+            0% { box-shadow: 0 0 10px #ff4757; }
+            100% { box-shadow: 0 0 25px #ff4757, 0 0 35px #ff4757; }
+        }
+    </style>
+</head>
+<body>
+    <audio id="backgroundMusic" loop>
+        <source src="assets/music/chase.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="game-container">
+        <canvas id="gameCanvas" width="1400" height="900"></canvas>
+        
+        <div class="ui-overlay">
+            <div class="game-info">
+                <div class="player-status player1-status">
+                    <div class="player-name">🔥 ПАНК САНЯ</div>
+                    <div class="player-boosts" id="player1Boosts"></div>
+                </div>
+                <div class="player-status player2-status">
+                    <div class="player-name">💼 БИЗНЕСМЕН ЛЕХА</div>
+                    <div class="player-boosts" id="player2Boosts"></div>
+                </div>
+            </div>
+            
+            <div class="timer" id="gameTimer">0:00</div>
+            
+            <div class="cooldown-indicators">
+                <div>
+                    <div class="cooldown-label">🔥 Саня Призрак (/)</div>
+                    <div class="cooldown-bar">
+                        <div class="cooldown-fill" id="punkCooldown"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="cooldown-label">💼 Леха Призрак (E)</div>
+                    <div class="cooldown-bar">
+                        <div class="cooldown-fill" id="businessmanCooldown"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tension-indicator" id="tensionIndicator">
+                <div class="tension-bar">
+                    <div class="tension-fill" id="tensionFill"></div>
+                </div>
+                <div class="tension-text">НАПРЯЖЕНИЕ</div>
+            </div>
+            
+            <canvas class="minimap" id="minimap" width="200" height="150"></canvas>
+            
+            <div class="controls-info">
+                <div><strong>🔥 Панк Саня:</strong> Стрелочки + <strong>/</strong> (призрак 1 сек)</div>
+                <div><strong>💼 Бизнесмен Леха:</strong> WASD + <strong>E</strong> (призрак 1 сек)</div>
+                <div style="margin-top: 10px; color: #00ff88;">
+                    <strong>Бустеры:</strong> ⚡ Скорость | 👻 Призрак (сквозь стены)
+                </div>
+                <div style="margin-top: 5px; color: #9c88ff; font-size: 14px;">
+                    <strong>Призрак по кнопке:</strong> Кулдаун 5 секунд
+                </div>
+            </div>
+        </div>
+
+        <div class="start-screen" id="startScreen">
+            <h1 class="game-title">ЛАБИРИНТ ПОГОНИ</h1>
+            <div class="game-description">
+                <p>Эпическая погоня в неоновом лабиринте!</p>
+                <p><strong>🔥 Панк Саня с ирокезом</strong> должен поймать <strong>💼 Бизнесмена Леху</strong></p>
+                <p><strong>⏰ Время раунда: 2 минуты!</strong> Саня должен поймать Леху, иначе побеждает Леха!</p>
+                <p>Используйте бустеры, проходите сквозь стены, убегайте в лабиринте!</p>
+                <p>Каждый раунд - новая карта!</p>
+            </div>
+            <button class="game-button" onclick="startGame()">НАЧАТЬ ОХОТУ</button>
+        </div>
+
+        <div class="end-screen hide" id="endScreen">
+            <div class="winner-text" id="winnerText"></div>
+            <div class="game-description">
+                <p id="gameResult"></p>
+            </div>
+            <button class="game-button" onclick="nextRound()">СЛЕДУЮЩИЙ РАУНД</button>
+            <button class="game-button secondary" onclick="restartGame()">НОВАЯ ИГРА</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
